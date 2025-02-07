@@ -1,7 +1,7 @@
 import type { HTMLPasteEventDetail } from '@editorjs/editorjs';
 
 /**
- * Represents options for uploading, including a function to handle previewing.
+ * Represents options for uploading, including a function to handle previewing. check
  */
 export interface UploadOptions {
   /**
