@@ -1,9 +1,16 @@
 /**
  * Build styles
  */
-import './index.css';
+import "./index.css";
 
-import { IconAddBorder, IconStretch, IconAddBackground } from '@codexteam/icons';
+import {
+  IconAddBorder,
+  IconStretch,
+  IconAddBackground,
+} from "@codexteam/icons";
+import { SimpleImageData, SimpleImageConfig } from "./types";
+import { PasteEvent } from "@editorjs/editorjs";
+import type { TagPasteEventDetail } from "./types";
 
 /**
  * SimpleImage Tool for the Editor.js
@@ -17,7 +24,48 @@ import { IconAddBorder, IconStretch, IconAddBackground } from '@codexteam/icons'
  * @property {boolean} withBackground - should image be rendered with background
  * @property {boolean} stretched - should image be stretched to full width of container
  */
+
+// Add these interfaces at the top of the file
+interface HTMLPasteEventDetail {
+  type: "html";
+  data: HTMLElement;
+}
+
+interface FilePasteEventDetail {
+  type: "file";
+  file: File;
+}
+
+interface PatternPasteEventDetail {
+  type: "pattern";
+  data: string;
+}
+
 export default class SimpleImage {
+  private api: any;
+  private readOnly: boolean;
+  private blockIndex: number;
+  private CSS: {
+    baseClass: string;
+    loading: string;
+    input: string;
+    wrapper: string;
+    imageHolder: string;
+    caption: string;
+  };
+  private nodes: {
+    wrapper: HTMLElement | null;
+    imageHolder: HTMLElement | null;
+    image: HTMLImageElement | null;
+    caption: HTMLElement | null;
+  };
+  private _data!: SimpleImageData;
+  private tunes: Array<{
+    name: keyof SimpleImageData;
+    label: string;
+    icon: string;
+  }>;
+
   /**
    * Render plugin`s main Element and fill it with saved data
    *
@@ -27,7 +75,12 @@ export default class SimpleImage {
    *   api - Editor.js API
    *   readOnly - read-only mode flag
    */
-  constructor({ data, config, api, readOnly }) {
+  constructor({
+    data = {} as Partial<SimpleImageData>,
+    config,
+    api,
+    readOnly,
+  }: SimpleImageConfig) {
     /**
      * Editor.js API
      */
@@ -55,9 +108,9 @@ export default class SimpleImage {
       /**
        * Tool's classes
        */
-      wrapper: 'cdx-simple-image',
-      imageHolder: 'cdx-simple-image__picture',
-      caption: 'cdx-simple-image__caption',
+      wrapper: "cdx-simple-image",
+      imageHolder: "cdx-simple-image__picture",
+      caption: "cdx-simple-image__caption",
     };
 
     /**
@@ -74,11 +127,11 @@ export default class SimpleImage {
      * Tool's initial data
      */
     this.data = {
-      url: data.url || '',
-      caption: data.caption || '',
-      withBorder: data.withBorder !== undefined ? data.withBorder : false,
-      withBackground: data.withBackground !== undefined ? data.withBackground : false,
-      stretched: data.stretched !== undefined ? data.stretched : false,
+      url: data?.url || "",
+      caption: data?.caption || "",
+      withBorder: data?.withBorder ?? false,
+      withBackground: data?.withBackground ?? false,
+      stretched: data?.stretched ?? false,
     };
 
     /**
@@ -86,18 +139,18 @@ export default class SimpleImage {
      */
     this.tunes = [
       {
-        name: 'withBorder',
-        label: 'Add Border',
+        name: "withBorder",
+        label: "Add Border",
         icon: IconAddBorder,
       },
       {
-        name: 'stretched',
-        label: 'Stretch Image',
+        name: "stretched",
+        label: "Stretch Image",
         icon: IconStretch,
       },
       {
-        name: 'withBackground',
-        label: 'Add Background',
+        name: "withBackground",
+        label: "Add Background",
         icon: IconAddBackground,
       },
     ];
@@ -111,17 +164,17 @@ export default class SimpleImage {
    *
    * @public
    */
-  render() {
-    const wrapper = this._make('div', [this.CSS.baseClass, this.CSS.wrapper]),
-        loader = this._make('div', this.CSS.loading),
-        imageHolder = this._make('div', this.CSS.imageHolder),
-        image = this._make('img'),
-        caption = this._make('div', [this.CSS.input, this.CSS.caption], {
-          contentEditable: !this.readOnly,
-          innerHTML: this.data.caption || '',
-        });
+  render(): HTMLElement {
+    const wrapper = this._make("div", [this.CSS.baseClass, this.CSS.wrapper]),
+      loader = this._make("div", this.CSS.loading),
+      imageHolder = this._make("div", this.CSS.imageHolder),
+      image = this._make("img", null) as HTMLImageElement,
+      caption = this._make("div", [this.CSS.input, this.CSS.caption], {
+        contentEditable: !this.readOnly,
+        innerHTML: this.data.caption || "",
+      });
 
-    caption.dataset.placeholder = 'Enter a caption';
+    caption.dataset.placeholder = "Enter a caption";
 
     wrapper.appendChild(loader);
 
@@ -140,7 +193,7 @@ export default class SimpleImage {
 
     image.onerror = (e) => {
       // @todo use api.Notifies.show() to show error notification
-      console.log('Failed to load an image', e);
+      console.log("Failed to load an image", e);
     };
 
     this.nodes.imageHolder = imageHolder;
@@ -156,17 +209,17 @@ export default class SimpleImage {
    * @param {Element} blockContent - Tool's wrapper
    * @returns {SimpleImageData}
    */
-  save(blockContent) {
-    const image = blockContent.querySelector('img'),
-        caption = blockContent.querySelector('.' + this.CSS.input);
+  save(blockContent: HTMLElement): SimpleImageData {
+    const image = blockContent.querySelector("img"),
+      caption = blockContent.querySelector("." + this.CSS.input);
 
     if (!image) {
       return this.data;
     }
 
     return Object.assign(this.data, {
-      url: image.src,
-      caption: caption.innerHTML,
+      url: image?.src || "",
+      caption: caption?.innerHTML || "",
     });
   }
 
@@ -201,16 +254,19 @@ export default class SimpleImage {
    * @param {File} file
    * @returns {Promise<SimpleImageData>}
    */
-  onDropHandler(file) {
+  onDropHandler(file: File): Promise<SimpleImageData> {
     const reader = new FileReader();
 
     reader.readAsDataURL(file);
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       reader.onload = (event) => {
         resolve({
-          url: event.target.result,
+          url: event?.target?.result as string,
           caption: file.name,
+          withBorder: false,
+          withBackground: false,
+          stretched: false,
         });
       };
     });
@@ -221,34 +277,38 @@ export default class SimpleImage {
    *
    * @param {PasteEvent} event - event with pasted config
    */
-  onPaste(event) {
+  onPaste(event: PasteEvent) {
     switch (event.type) {
-      case 'tag': {
-        const img = event.detail.data;
-
+      case "tag": {
+        const img = (event.detail as TagPasteEventDetail)
+          .data as HTMLImageElement;
         this.data = {
-          url: img.src,
+          url: img?.src || "",
+          caption: "",
+          withBorder: false,
+          withBackground: false,
+          stretched: false,
         };
         break;
       }
 
-      case 'pattern': {
-        const { data: text } = event.detail;
-
+      case "pattern": {
+        const detail = event.detail as unknown as PatternPasteEventDetail;
         this.data = {
-          url: text,
+          url: detail.data,
+          caption: "",
+          withBorder: false,
+          withBackground: false,
+          stretched: false,
         };
         break;
       }
 
-      case 'file': {
-        const { file } = event.detail;
-
-        this.onDropHandler(file)
-          .then(data => {
-            this.data = data;
-          });
-
+      case "file": {
+        const detail = event.detail as FilePasteEventDetail;
+        this.onDropHandler(detail.file).then((data) => {
+          this.data = data;
+        });
         break;
       }
     }
@@ -259,7 +319,7 @@ export default class SimpleImage {
    *
    * @returns {SimpleImageData}
    */
-  get data() {
+  get data(): SimpleImageData {
     return this._data;
   }
 
@@ -268,7 +328,7 @@ export default class SimpleImage {
    *
    * @param {SimpleImageData} data
    */
-  set data(data) {
+  set data(data: SimpleImageData) {
     this._data = Object.assign({}, this.data, data);
 
     if (this.nodes.image) {
@@ -297,7 +357,7 @@ export default class SimpleImage {
         },
       ],
       files: {
-        mimeTypes: [ 'image/*' ],
+        mimeTypes: ["image/*"],
       },
     };
   }
@@ -307,15 +367,25 @@ export default class SimpleImage {
    *
    * @returns {Array}
    */
-  renderSettings() {
-    return this.tunes.map(tune => ({
+  renderSettings(): Array<{
+    name: keyof SimpleImageData;
+    label: string;
+    icon: string;
+    toggle: boolean;
+    onActivate: () => void;
+    isActive: boolean;
+  }> {
+    return this.tunes.map((tune) => ({
       ...tune,
       label: this.api.i18n.t(tune.label),
       toggle: true,
-      onActivate: () => this._toggleTune(tune.name),
+      onActivate: () =>
+        this._toggleTune(
+          tune.name as "withBorder" | "withBackground" | "stretched"
+        ),
       isActive: !!this.data[tune.name],
-    }))
-  };
+    }));
+  }
 
   /**
    * Helper for making Elements with attributes
@@ -325,7 +395,11 @@ export default class SimpleImage {
    * @param  {object} attributes        - any attributes
    * @returns {Element}
    */
-  _make(tagName, classNames = null, attributes = {}) {
+  _make(
+    tagName: string,
+    classNames: Array<string> | string | null,
+    attributes: Record<string, any> = {}
+  ): HTMLElement {
     const el = document.createElement(tagName);
 
     if (Array.isArray(classNames)) {
@@ -335,7 +409,13 @@ export default class SimpleImage {
     }
 
     for (const attrName in attributes) {
-      el[attrName] = attributes[attrName];
+      if (attrName === "contentEditable") {
+        el.contentEditable = attributes[attrName];
+      } else if (attrName === "innerHTML") {
+        el.innerHTML = attributes[attrName];
+      } else {
+        el.setAttribute(attrName, attributes[attrName]);
+      }
     }
 
     return el;
@@ -347,9 +427,11 @@ export default class SimpleImage {
    * @private
    * @param tune
    */
-  _toggleTune(tune) {
-    this.data[tune] = !this.data[tune];
-    this._acceptTuneView();
+  _toggleTune(tune: "withBorder" | "withBackground" | "stretched") {
+    if (typeof this.data[tune] === "boolean") {
+      this.data[tune] = !this.data[tune];
+      this._acceptTuneView();
+    }
   }
 
   /**
@@ -358,10 +440,17 @@ export default class SimpleImage {
    * @private
    */
   _acceptTuneView() {
-    this.tunes.forEach(tune => {
-      this.nodes.imageHolder.classList.toggle(this.CSS.imageHolder + '--' + tune.name.replace(/([A-Z])/g, (g) => `-${g[0].toLowerCase()}`), !!this.data[tune.name]);
+    if (!this.nodes.imageHolder) return;
 
-      if (tune.name === 'stretched') {
+    this.tunes.forEach((tune) => {
+      this.nodes.imageHolder?.classList.toggle(
+        this.CSS.imageHolder +
+          "--" +
+          tune.name.replace(/([A-Z])/g, (g) => `-${g[0].toLowerCase()}`),
+        !!this.data[tune.name]
+      );
+
+      if (tune.name === "stretched") {
         this.api.blocks.stretchBlock(this.blockIndex, !!this.data.stretched);
       }
     });
