@@ -1,4 +1,4 @@
-import type { API } from "@editorjs/editorjs";
+import type { API } from '@editorjs/editorjs';
 
 export interface SimpleImageData {
   url: string;
@@ -11,7 +11,7 @@ export interface SimpleImageData {
 export interface SimpleImageConfig {
   data?: Partial<SimpleImageData>;
   config?: any;
-  api: any;
+  api: API;
   readOnly: boolean;
 }
 

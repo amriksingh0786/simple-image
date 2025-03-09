@@ -9,7 +9,13 @@ import {
   IconAddBackground,
 } from "@codexteam/icons";
 import { SimpleImageData, SimpleImageConfig } from "./types";
-import { PasteEvent } from "@editorjs/editorjs";
+import {
+  API,
+  FilePasteEventDetail,
+  PasteEvent,
+  PatternPasteEventDetail,
+  BlockTool,
+} from "@editorjs/editorjs";
 import type { TagPasteEventDetail } from "./types";
 
 /**
@@ -25,26 +31,25 @@ import type { TagPasteEventDetail } from "./types";
  * @property {boolean} stretched - should image be stretched to full width of container
  */
 
-// Add these interfaces at the top of the file
-interface HTMLPasteEventDetail {
-  type: "html";
-  data: HTMLElement;
-}
+export default class SimpleImage implements BlockTool {
+  /**
+   * Editor.js API instance
+   */
+  private api: API;
 
-interface FilePasteEventDetail {
-  type: "file";
-  file: File;
-}
-
-interface PatternPasteEventDetail {
-  type: "pattern";
-  data: string;
-}
-
-export default class SimpleImage {
-  private api: any;
+  /**
+   * Indicates whether the block is in read-only mode
+   */
   private readOnly: boolean;
+
+  /**
+   * Index of the current block in the editor
+   */
   private blockIndex: number;
+
+  /**
+   * CSS classes used for styling elements
+   */
   private CSS: {
     baseClass: string;
     loading: string;
@@ -53,13 +58,25 @@ export default class SimpleImage {
     imageHolder: string;
     caption: string;
   };
+
+  /**
+   * Cache of DOM nodes used in the block
+   */
   private nodes: {
     wrapper: HTMLElement | null;
     imageHolder: HTMLElement | null;
     image: HTMLImageElement | null;
     caption: HTMLElement | null;
   };
+
+  /**
+   * Tool's data storage
+   */
   private _data!: SimpleImageData;
+
+  /**
+   * Available image settings (tunes) config
+   */
   private tunes: Array<{
     name: keyof SimpleImageData;
     label: string;
@@ -248,11 +265,10 @@ export default class SimpleImage {
   }
 
   /**
-   * Read pasted image and convert it to base64
+   * Handles file drop events by converting the image to base64
    *
-   * @static
-   * @param {File} file
-   * @returns {Promise<SimpleImageData>}
+   * @param {File} file - The dropped file object
+   * @returns {Promise<SimpleImageData>} Promise resolving to image data
    */
   onDropHandler(file: File): Promise<SimpleImageData> {
     const reader = new FileReader();
@@ -273,9 +289,10 @@ export default class SimpleImage {
   }
 
   /**
-   * On paste callback that is fired from Editor.
+   * Handles paste events for images
+   * Supports pasting image tags, URLs, and files
    *
-   * @param {PasteEvent} event - event with pasted config
+   * @param {PasteEvent} event - The paste event containing image data
    */
   onPaste(event: PasteEvent) {
     switch (event.type) {
@@ -315,18 +332,19 @@ export default class SimpleImage {
   }
 
   /**
-   * Returns image data
+   * Getter for the tool's data
    *
-   * @returns {SimpleImageData}
+   * @returns {SimpleImageData} Current image block data
    */
   get data(): SimpleImageData {
     return this._data;
   }
 
   /**
-   * Set image data and update the view
+   * Setter for the tool's data
+   * Updates both the data storage and the view
    *
-   * @param {SimpleImageData} data
+   * @param {SimpleImageData} data - New image block data
    */
   set data(data: SimpleImageData) {
     this._data = Object.assign({}, this.data, data);
@@ -388,12 +406,13 @@ export default class SimpleImage {
   }
 
   /**
-   * Helper for making Elements with attributes
+   * Creates a DOM element with specified attributes and classes
    *
-   * @param  {string} tagName           - new Element tag name
-   * @param  {Array|string} classNames  - list or name of CSS classname(s)
-   * @param  {object} attributes        - any attributes
-   * @returns {Element}
+   * @private
+   * @param {string} tagName - The HTML tag name for the new element
+   * @param {Array<string>|string|null} classNames - CSS class name(s) to add to the element
+   * @param {Record<string, any>} attributes - Object containing element attributes
+   * @returns {HTMLElement} The created DOM element
    */
   _make(
     tagName: string,
@@ -422,10 +441,10 @@ export default class SimpleImage {
   }
 
   /**
-   * Click on the Settings Button
+   * Toggles the specified tune (image setting) on/off
    *
    * @private
-   * @param tune
+   * @param {('withBorder'|'withBackground'|'stretched')} tune - The tune property to toggle
    */
   _toggleTune(tune: "withBorder" | "withBackground" | "stretched") {
     if (typeof this.data[tune] === "boolean") {
@@ -435,7 +454,8 @@ export default class SimpleImage {
   }
 
   /**
-   * Add specified class corresponds with activated tunes
+   * Updates the image holder's CSS classes based on active tunes
+   * Applies visual modifications like border, background, and stretch settings
    *
    * @private
    */
