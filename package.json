@@ -25,7 +25,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build"
+    "build": "vite build"
   },
   "author": {
     "name": "CodeX",
@@ -33,12 +33,11 @@
   },
   "devDependencies": {
     "@editorjs/editorjs": "^2.30.8",
-    "@types/dompurify": "^3.0.5",
     "@types/node": "^22.13.4",
-    "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.7.3",
     "vite": "^4.5.0",
-    "vite-plugin-css-injected-by-js": "^3.3.0"
+    "vite-plugin-css-injected-by-js": "^3.3.0",
+    "vite-plugin-dts": "^4.5.3"
   },
   "dependencies": {
     "@codexteam/icons": "^0.3.0",

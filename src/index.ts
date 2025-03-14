@@ -92,12 +92,7 @@ export default class SimpleImage implements BlockTool {
    *   api - Editor.js API
    *   readOnly - read-only mode flag
    */
-  constructor({
-    data = {} as Partial<SimpleImageData>,
-    config,
-    api,
-    readOnly,
-  }: SimpleImageConfig) {
+  constructor({ data, config, api, readOnly }: SimpleImageConfig) {
     /**
      * Editor.js API
      */
